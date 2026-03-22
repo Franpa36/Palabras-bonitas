@@ -3,36 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voces del Mundo</title>
+    <title>Palabras del Alma</title>
+    <!-- Fuentes: Pinyon Script (Caligrafía) y Lora (Cuerpo) -->
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;1,400&family=Pinyon+Script&display=swap" rel="stylesheet">
-    <!-- Librería para convertir HTML a Imagen de forma gratuita -->
+    
+    <!-- Librería para la descarga de imagen -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         :root {
-            --cafe-oscuro: #1b1411;
+            --cafe: #2c1e14;
             --bronce: #c19a6b;
             --crema: #d7ccc8;
         }
 
         body {
-            background-color: var(--cafe-oscuro);
+            background-color: var(--cafe);
             background-image: radial-gradient(circle, #3e2723 0%, #1b1411 100%);
             color: var(--crema);
-            height: 100vh;
             margin: 0;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             font-family: 'Lora', serif;
-            text-align: center;
+            overflow-x: hidden;
         }
 
-        /* Contenedor Visual de la App */
+        /* Área que se convertirá en imagen */
         #capture-area {
-            padding: 40px;
-            max-width: 600px;
-            transition: all 0.8s ease;
+            padding: 50px;
+            max-width: 650px;
+            text-align: center;
+            transition: opacity 0.5s ease;
+            background: transparent;
+            border-radius: 15px;
         }
 
         .word {
@@ -41,13 +47,15 @@
             color: var(--bronce);
             margin: 0;
             font-style: italic;
+            line-height: 1.1;
         }
 
         .meta {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-style: italic;
-            margin-top: 10px;
+            margin-top: 15px;
             color: #a1887f;
+            letter-spacing: 1px;
         }
 
         .line {
@@ -55,118 +63,133 @@
             height: 1px;
             background: linear-gradient(to right, transparent, var(--bronce), transparent);
             margin: 30px auto;
-            width: 60%;
+            width: 70%;
         }
 
         .definition {
-            font-size: 1.3rem;
-            line-height: 1.7;
+            font-size: 1.4rem;
+            line-height: 1.8;
             font-style: italic;
+            color: var(--crema);
         }
 
-        /* Botones */
-        .controls {
-            margin-top: 40px;
+        /* Contenedor de Botones */
+        .button-container {
+            margin-top: 50px;
             display: flex;
-            gap: 15px;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         button {
-            background: none;
+            background: transparent;
             border: 1px solid var(--bronce);
             color: var(--bronce);
-            padding: 10px 20px;
+            padding: 12px 25px;
             cursor: pointer;
             font-family: 'Lora', serif;
             text-transform: uppercase;
             letter-spacing: 2px;
-            font-size: 0.7rem;
-            transition: 0.3s;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            z-index: 100; /* Asegura que esté por encima de todo */
         }
 
         button:hover {
             background: var(--bronce);
-            color: white;
+            color: var(--cafe);
         }
 
-        /* Estilo especial para la descarga (se activa solo un segundo) */
-        .download-mode {
-            background: white !important;
+        /* Estilo para la descarga (Fondo blanco, letra negra) */
+        .canvas-export {
+            background-color: white !important;
             color: black !important;
         }
-        .download-mode .word { color: black !important; }
-        .download-mode .line { background: black !important; }
-        .download-mode .meta { color: #555 !important; }
+        .canvas-export .word, 
+        .canvas-export .definition, 
+        .canvas-export .meta {
+            color: black !important;
+        }
+        .canvas-export .line {
+            background: black !important;
+        }
     </style>
 </head>
 <body>
 
     <div id="capture-area">
-        <h1 class="word" id="w">...</h1>
-        <p class="meta" id="m"></p>
-        <hr class="line" id="l">
-        <p class="definition" id="d"></p>
+        <h1 class="word" id="word-text">Cargando...</h1>
+        <p class="meta" id="meta-text"></p>
+        <hr class="line">
+        <p class="definition" id="def-text"></p>
     </div>
 
-    <div class="controls">
-        <button onclick="nextWord()">Siguiente Palabra</button>
-        <button onclick="downloadImage()">Descargar Imagen</button>
+    <div class="button-container">
+        <button onclick="getRandomWord()">Otra Palabra</button>
+        <button onclick="download()">Descargar Imagen</button>
     </div>
 
     <script>
-        const words = [
-            // Originales y nuevas
-            { w: "Ataraxia", l: "Griego", t: "Ataraxia", d: "La paz que llega cuando el alma deja de pelear con el viento.", tone: "afable" },
-            { w: "Taciturno", l: "Latín", t: "Taciturno", d: "Aquel que guarda silencios que pesan, prefiriendo el refugio de las sombras.", tone: "melancólico" },
+        const dictionary = [
+            // Asiáticas
+            { w: "Mono no aware", l: "Japonés", t: "Sensibilidad", d: "La belleza agridulce de saber que todo es efímero. Como el pétalo que cae sabiendo que su tiempo ha terminado.", tone: "melancólico" },
+            { w: "Wabi-sabi", l: "Japonés", t: "Wabi-sabi", d: "La capacidad de ver la perfección en lo incompleto y lo roto. Una grieta no es un error, es historia.", tone: "sincero" },
+            { w: "In-yeon", l: "Coreano", t: "Destino", d: "Si dos personas se cruzan en la calle es porque hubo 8,000 capas de conexión en sus vidas pasadas.", tone: "sincero" },
+            { w: "Yuanfen", l: "Chino", t: "Causalidad", d: "La fuerza invisible que une a dos personas. Un destino que no se puede forzar, solo esperar.", tone: "afable" },
+            { w: "Komorebi", l: "Japonés", t: "Luz de árbol", d: "La luz del sol que se filtra entre las hojas de los árboles, recordándonos que siempre hay luz entre las sombras.", tone: "afable" },
+            { w: "Yūgen", l: "Japonés", t: "Misterio", d: "Un sentido profundo y misterioso de la belleza del universo, que es demasiado sutil para ser descrita con palabras.", tone: "melancólico" },
+            { w: "Han", l: "Coreano", t: "Dolor", d: "Un sufrimiento colectivo, una tristeza profunda que se mezcla con la esperanza de que algún día las cosas serán diferentes.", tone: "melancólico" },
             
-            // Asiáticas (Japón, China, Corea)
-            { w: "Mono no aware", l: "Japonés", t: "Sensibilidad ante lo efímero", d: "Una empatía profunda con el paso del tiempo. La belleza triste de saber que nada dura para siempre, como la caída de los cerezos.", tone: "melancólico" },
-            { w: "Wabi-sabi", l: "Japonés", t: "Wabi-sabi", d: "Encontrar la perfección en lo imperfecto y la belleza en lo que está roto o viejo.", tone: "sincero" },
-            { w: "Yuanfen", l: "Chino", t: "Destino vincular", d: "La fuerza que une a dos personas de forma inevitable. Un hilo invisible que atraviesa el tiempo y el espacio.", tone: "afable" },
-            { w: "In-yeon", l: "Coreano", t: "Providencia", d: "La creencia de que cada encuentro entre dos personas es el resultado de miles de vidas pasadas de conexión.", tone: "sincero" },
-            { w: "Koi No Yokan", l: "Japonés", t: "Premonición de amor", d: "No es amor a primera vista, sino la sensación inevitable de que vas a enamorarte irremediablemente de alguien en el futuro.", tone: "sincero" },
-            { w: "Natsukashii", l: "Japonés", t: "Nostalgia alegre", d: "Cuando un pequeño detalle del presente te transporta a un recuerdo feliz del pasado, haciéndote sonreír con una pizca de tristeza.", tone: "afable" },
-            { w: "Kintsugi", l: "Japonés", t: "Carpintería de oro", d: "El arte de reparar lo roto con oro, entendiendo que una pieza es más hermosa por haber sido quebrada y tener historia.", tone: "sincero" },
-            { w: "Wu Wei", l: "Chino", t: "No acción", d: "Fluir con la naturaleza de las cosas sin forzarlas. Ser como el agua que vence a la roca por persistencia, no por fuerza.", tone: "afable" }
+            // Europeas/Otras
+            { w: "Saudade", l: "Portugués", t: "Saudade", d: "La presencia de la ausencia. Un vacío que se siente como una caricia de alguien que ya no está.", tone: "melancólico" },
+            { w: "Ataraxia", l: "Griego", t: "Ataraxia", d: "Ese silencio interno donde el mundo deja de doler y el alma finalmente descansa.", tone: "afable" },
+            { w: "Hiraeth", l: "Galés", t: "Añoranza", d: "Sentir nostalgia por un lugar que nunca existió, o por un hogar al que ya no se puede volver.", tone: "melancólico" }
         ];
 
-        let availableWords = [...words];
+        let history = [];
 
-        function nextWord() {
-            if (availableWords.length === 0) {
-                availableWords = [...words]; // Reiniciar cuando se acaben
-            }
+        function getRandomWord() {
+            // Anti-repetición
+            if (history.length === dictionary.length) history = [];
+            
+            let filtered = dictionary.filter(item => !history.includes(item.w));
+            let item = filtered[Math.floor(Math.random() * filtered.length)];
+            
+            history.push(item.w);
 
-            const index = Math.floor(Math.random() * availableWords.length);
-            const item = availableWords.splice(index, 1)[0]; // Saca la palabra de la lista para no repetirla
+            // Animación de salida
+            document.getElementById('capture-area').style.opacity = 0;
 
-            document.getElementById('w').innerText = item.w;
-            document.getElementById('m').innerText = `(${item.l}) ${item.w !== item.t ? ' — ' + item.t : ''}`;
-            document.getElementById('d').innerText = item.d;
+            setTimeout(() => {
+                document.getElementById('word-text').innerText = item.w;
+                document.getElementById('meta-text').innerText = `(${item.l})${item.w !== item.t ? ' — ' + item.t : ''}`;
+                document.getElementById('def-text').innerText = item.d;
+                document.getElementById('capture-area').style.opacity = 1;
+            }, 500);
         }
 
-        async function downloadImage() {
+        function download() {
             const area = document.getElementById('capture-area');
             
-            // 1. Cambiamos visualmente a modo descarga (Blanco y Negro)
-            area.classList.add('download-mode');
-            
-            // 2. Usamos html2canvas para crear la imagen
+            // Aplicar estilo de impresión (Blanco y Negro)
+            area.classList.add('canvas-export');
+
             html2canvas(area, {
                 backgroundColor: "#ffffff",
-                scale: 2 // Mayor calidad
+                scale: 3 // Alta definición
             }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `Palabra-${document.getElementById('w').innerText}.jpg`;
-                link.href = canvas.toDataURL("image/jpeg", 0.9);
+                link.download = `Palabra-${document.getElementById('word-text').innerText}.png`;
+                link.href = canvas.toDataURL();
                 link.click();
                 
-                // 3. Devolvemos el estilo original
-                area.classList.remove('download-mode');
+                // Quitar estilo de impresión y volver al café
+                area.classList.remove('canvas-export');
             });
         }
 
-        window.onload = nextWord;
+        window.onload = getRandomWord;
     </script>
 </body>
 </html>
